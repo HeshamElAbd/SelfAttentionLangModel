@@ -10,7 +10,7 @@ import tensorflow as tf
 from buildingTransFormer import Modeler
 import numpy as np
 import pickle
-from utility_functions import( EncodeText, PrepareTrainingTensors,loss)
+from utility_functions import( EncodeText, PrepareTrainingTensors)
 import time 
 
 raw_text=""
@@ -42,36 +42,45 @@ train_dataset=text_as_chuncks.map(PrepareTrainingTensors).shuffle(
         10000).batch(32,drop_remainder=True)
 
 ## define the models:
-Trial_one=Modeler(embedding_dim=8,vocabulary_size=10000, 
+Trial_one=Modeler(embedding_dim=8,vocabulary_size=70, 
                       conditional_string_length=120,dff=16,num_encoder_layer=2,
-                      num_heads=4,rate=0.1)
+                      num_heads=4,rate=0.1,seq_len=120)
 ## loss function: 
 
 ## define the optimizer: 
 optm=tf.keras.optimizers.Adam()
-## define the training objective: 
-train_step_signature = [
-    tf.TensorSpec(shape=(None, None), dtype=tf.int64),
-    tf.TensorSpec(shape=(None, None), dtype=tf.int64),
-]
-
-loss=tf.keras.losses.SparseCategoricalCrossentropy(
+## define the training objective:
+loss_objective=tf.keras.losses.SparseCategoricalCrossentropy(
     from_logits=True, reduction='none')
 
+def loss(real,pred):
+    return tf.reduce_mean(loss_objective(real,pred))
+    
 train_loss = tf.keras.metrics.Mean(name='train_loss')
 train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(
     name='train_accuracy')
 
-
-for (batch, (inp, tar)) in enumerate(train_dataset):
-    with tf.GradientTape() as tape:
-        predictions = Trial_one(inp, 
+@tf.function
+def train_step(inp, tar): 
+  with tf.GradientTape() as tape:
+    predictions = Trial_one(inp,
                                  True, 
                                  None)
-        loss_ = loss(tar, predictions)
-    gradients = tape.gradient(loss_, Trial_one.trainable_variables)    
-    optm.apply_gradients(zip(gradients, Trial_one.trainable_variables))
-    print("loss is : " +str(np.mean(loss_.numpy())))
+    loss_ = loss(tar, predictions)
+
+  gradients = tape.gradient(loss_, Trial_one.trainable_variables)    
+  optm.apply_gradients(zip(gradients, Trial_one.trainable_variables))
+  train_loss(loss_)
+  train_accuracy(tar, predictions)
+  
+for epoch in range(10):
+  start = time.time()
+  train_loss.reset_states()
+  train_accuracy.reset_states()
+  for (batch, (inp, tar)) in enumerate(train_dataset):
+    train_step(inp, tar)
+    print ('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
+          epoch + 1, batch, train_loss.result(), train_accuracy.result()))
 
 
 
