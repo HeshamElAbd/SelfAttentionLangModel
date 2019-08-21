@@ -7,10 +7,10 @@ Created on Mon Aug 19 12:46:46 2019
 @Description: Building a simple language model 
 """
 import tensorflow as tf
-#from TestingTheEncoder import Modeler
+from buildingTransFormer import Modeler
 import numpy as np
 import pickle
-from utility_functions import( EncodeText, PrepareTrainingTensors)
+from utility_functions import( EncodeText, PrepareTrainingTensors,loss)
 import time 
 
 raw_text=""
@@ -39,64 +39,64 @@ text_as_chuncks=tf.data.Dataset.from_tensor_slices(text_encoded).batch(
         120+1,drop_remainder=True)
 ## preapre the TF data for training 
 train_dataset=text_as_chuncks.map(PrepareTrainingTensors).shuffle(
-        10000).batch(256,drop_remainder=True)
+        10000).batch(32,drop_remainder=True)
 
-Trial_one=mod=Modeler(embedding_dim=8,vocabulary_size=10000, 
+## define the models:
+Trial_one=Modeler(embedding_dim=8,vocabulary_size=10000, 
                       conditional_string_length=120,dff=16,num_encoder_layer=2,
                       num_heads=4,rate=0.1)
+## loss function: 
 
-optimizer=tf.keras.optimizers.Adam()
-lossFunction=tf.keras.losses.CategoricalCrossentropy(
-    from_logits=True, reduction='none')
-
+## define the optimizer: 
+optm=tf.keras.optimizers.Adam()
+## define the training objective: 
 train_step_signature = [
     tf.TensorSpec(shape=(None, None), dtype=tf.int64),
-    tf.TensorSpec(shape=(None, 120), dtype=tf.int64),
+    tf.TensorSpec(shape=(None, None), dtype=tf.int64),
 ]
 
+loss=tf.keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+
 train_loss = tf.keras.metrics.Mean(name='train_loss')
-train_accuracy = tf.keras.metrics.CategoricalAccuracy(
+train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(
     name='train_accuracy')
 
 
-@tf.function(input_signature=train_step_signature)
-def train_step(inp, tar):
+for (batch, (inp, tar)) in enumerate(train_dataset):
     with tf.GradientTape() as tape:
-        predictions, _ = Trial_one(inp,
-                                 True, None)
-        loss = lossFunction(tar, predictions)
-    gradients = tape.gradient(loss, Trial_one.trainable_variables)    
-    optimizer.apply_gradients(zip(gradients, Trial_one.trainable_variables))
-  
-    train_loss(loss)
-    train_accuracy(tar, predictions)
+        predictions = Trial_one(inp, 
+                                 True, 
+                                 None)
+        loss_ = loss(tar, predictions)
+    gradients = tape.gradient(loss_, Trial_one.trainable_variables)    
+    optm.apply_gradients(zip(gradients, Trial_one.trainable_variables))
+    print("loss is : " +str(np.mean(loss_.numpy())))
 
-for epoch in range(10):
-  start = time.time()
-  train_loss.reset_states()
-  train_accuracy.reset_states()    
-  for idx in  range(text_encoded.shape[0]-120):
-      with tf.GradientTape() as tape:
-          predictions = Trial_one(text_encoded[idx:idx+120].reshape(1,-1),
-                                 True, None)
-      loss = lossFunction(text_encoded[idx+1:idx+1+120].reshape(1,-1), predictions)
-      gradients = tape.gradient(loss, Trial_one.trainable_variables)    
-      optimizer.apply_gradients(zip(gradients, Trial_one.trainable_variables))
-    
-   
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
