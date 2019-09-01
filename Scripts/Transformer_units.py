@@ -105,6 +105,7 @@ class EncoderLayer(tf.keras.layers.Layer):
         self.dropout1 = tf.keras.layers.Dropout(rate)
         self.dropout2 = tf.keras.layers.Dropout(rate)
         self.return_attent_weights=return_attent_weights
+        
     def call(self, x, training, mask):
         attn_output, atten_weights = self.mha(x, x, x, mask)  
         attn_output = self.dropout1(attn_output, training=training)
@@ -113,10 +114,10 @@ class EncoderLayer(tf.keras.layers.Layer):
         ffn_output = self.ffn(out1)  
         ffn_output = self.dropout2(ffn_output, training=training)
         out2 = self.layernorm2(out1 + ffn_output)  
-        if not self.return_attent_weights:
-            return out2
+        if not training and self.return_attent_weights:
+            return out2, atten_weights            
         else:
-            return out2, atten_weights
+           return out2
 
 class Encoder(tf.keras.layers.Layer):
   def __init__(self, num_layers, d_model, num_heads, dff, input_vocab_size, 
@@ -145,20 +146,20 @@ class Encoder(tf.keras.layers.Layer):
     x += self.pos_encoding
 
     x = self.dropout(x, training=training)
-    if self.return_attent_weights==False:
-        for i in range(self.num_layers):
-            x = self.enc_layers[i](x, training, mask)
-        return x
-    else:
+    if not training and self.return_attent_weights:
         attentWeights=[]
         for i in range(self.num_layers):
             x, attent_weights= self.enc_layers[i](x, training, mask)
-            print(x,attent_weights)
             attentWeights.append(attent_weights)
         return x, attentWeights
+    else: 
+        for i in range(self.num_layers):
+            x = self.enc_layers[i](x, training, mask)
+        return x
+        
         
     
-class Modeler(tf.keras.layers.Layer):
+class Modeler(tf.keras.Model):
     def __init__(self,embedding_dim,
                  vocabulary_size,
                  conditional_string_length,
