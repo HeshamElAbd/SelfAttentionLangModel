@@ -141,15 +141,20 @@ class Annotator(tf.keras.Model):
                              rate=rate,
                              return_attent_weights=return_attent_weights)
         
-        self.pred_logits =tf.keras.layers.Dense(vocabulary_size)
+        self.dropout=tf.keras.layers.Dropout(rate=rate)
+        
+        self.pred_logits =tf.keras.layers.Dense(num_dense_units,
+                                                activation=dense_activation)
         
     def call(self, x,training):
         mask=EncoderParts.create_padding_mask(x)
         if not self.return_attent_weights:
             encoded_seq=self.encoder(x,training,mask)
+            encoded_seq=self.dropout(encoded_seq,training)
             modelPredictionLogit=self.pred_logits(encoded_seq)
             return modelPredictionLogit
         else: 
             encoded_seq, attent_weights=self.encoder(x,training,mask)
+            encoded_seq=self.dropout(encoded_seq,training)
             modelPredictionLogit=self.pred_logits(encoded_seq)
             return self.pred_logits(encoded_seq), attent_weights
