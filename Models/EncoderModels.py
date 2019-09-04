@@ -151,12 +151,13 @@ class Annotator(tf.keras.Model):
         if not self.return_attent_weights:
             encoded_seq=self.encoder(x,training,mask)
             encoded_seq=self.dropout(encoded_seq,training)
-            encoded_seq=tf.reduce_mean(encoded_seq,axis=1)
+            encoded_seq=tf.reshape(encoded_seq,[-1,
+                                                encoded_seq.shape[1]*encoded_seq.shape[2]])
             modelPredictionLogit=self.pred_logits(encoded_seq)
             return modelPredictionLogit
         else: 
             encoded_seq, attent_weights=self.encoder(x,training,mask)
             encoded_seq=self.dropout(encoded_seq,training)
-            encoded_seq=tf.reduce_mean(encoded_seq,axis=1)
+            encoded_seq=tf.reshape(encoded_seq,[encoded_seq.shape[0],-1])
             modelPredictionLogit=self.pred_logits(encoded_seq)
             return self.pred_logits(encoded_seq), attent_weights
