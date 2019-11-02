@@ -12,7 +12,7 @@ sequene to a specific numerical label.
 # loadthe modules
 from Parts import EncoderParts
 import tensorflow as tf
-
+from __future__ import print_function
 # define the models
 class Modeler(tf.keras.Model):
     def __init__(self,embedding_dim,
@@ -43,7 +43,7 @@ class Modeler(tf.keras.Model):
         # num_neuron_pointwise: is the number of neurons in the feed-forward
         point wise attention neuros.
         
-        # rate: is the drop out rate. 
+        # rate: is the dropout rate. 
         """
         super(Modeler,self).__init__()
         
@@ -57,13 +57,9 @@ class Modeler(tf.keras.Model):
                              seq_len=conditional_string_length,
                              rate=rate,
                              return_attent_weights=return_attent_weights)
-        
         self.dropout=tf.keras.layers.Dropout(rate=rate)
-        
         self.pred_logits =tf.keras.layers.Dense(vocabulary_size)
-        
-    
-    @tf.function # construc an autograph of the function
+    @tf.function
     def call(self, x,training):
         mask=EncoderParts.create_padding_mask(x)
         if not training and  self.return_attent_weights:
@@ -77,7 +73,7 @@ class Modeler(tf.keras.Model):
             encoded_seq=self.dropout(encoded_seq,training=training)
             modelPredictionLogit=self.pred_logits(encoded_seq)
             return modelPredictionLogit
-
+        
 class Annotator(tf.keras.Model):
     def __init__(self,embedding_dim,
                  vocabulary_size,
@@ -87,6 +83,7 @@ class Annotator(tf.keras.Model):
                  num_neuron_pointwise,
                  rate=0.1,
                  return_attent_weights=True,
+                 distilation_units=10,
                  num_dense_units=1,
                  dense_activation=None):
         """
@@ -94,8 +91,8 @@ class Annotator(tf.keras.Model):
         for example, classifiying an input sequence into categories or doing 
         regression on the input sequence. The Annotator is composite of two 
         parts, the first is the Encoder which is used to encode an input 
-        sequences and the second is a Dense network that is for mapping the 
-        encoded sequences into numerical labels.
+        sequences and the second is a Dense network that is used for mapping 
+        the encoded sequences into numerical labels.
         
         ## inputs:
         # embedding_dim: is the embedding dimension for each input integer to 
@@ -121,14 +118,19 @@ class Annotator(tf.keras.Model):
         dropout layer of the model.
         
         # return_attent_weights: a bool, determine wherther or not to return 
-        the self-attention weights of the model. incase it is true, please use 
-        the trainer module to train the model. 
+        the self-attention weights of the model. 
         
-        # num_dense_units: Is the number of neurons of the network that sets on
-        top of the encoder model, default is one.  
+        # distilation_units: is the number of dense units that set on top of
+        the encoder 3D output and reduce the dimensionality of the last axis
+        from num_neuron_pointwise to distilation_units.
+        
+        # num_dense_units: Is the number of neuron in the last layer of the 
+        model, usually one for binary classification and regression problems 
+        and more equal to number of classes incase of multi-class 
+        classfications problems.
         
         # dense_activation: is the activation function that will be applied to 
-        the dense subnetwor predictions, for example Relu or sigmoid, default
+        the last dense layer, for example Relu or sigmoid, default
         is None. 
         """
         super(Annotator,self).__init__()
@@ -144,6 +146,9 @@ class Annotator(tf.keras.Model):
                              rate=rate,
                              return_attent_weights=return_attent_weights)
         
+        self.dis_units=tf.keras.layers.Dense(distilation_units,
+                                             activation="relu")
+        
         self.dropout=tf.keras.layers.Dropout(rate=rate)
         
         self.pred_logits =tf.keras.layers.Dense(num_dense_units,
@@ -151,16 +156,21 @@ class Annotator(tf.keras.Model):
         
     def call(self, x,training):
         mask=EncoderParts.create_padding_mask(x)
-        if not self.return_attent_weights:
-            encoded_seq=self.encoder(x,training,mask)
-            encoded_seq=self.dropout(encoded_seq,training)
-            encoded_seq=tf.reshape(encoded_seq,[-1,
-                                                encoded_seq.shape[1]*encoded_seq.shape[2]])
-            modelPredictionLogit=self.pred_logits(encoded_seq)
-            return modelPredictionLogit
-        else: 
+        if not training and self.return_attent_weights:
             encoded_seq, attent_weights=self.encoder(x,training,mask)
             encoded_seq=self.dropout(encoded_seq,training)
-            encoded_seq=tf.reshape(encoded_seq,[encoded_seq.shape[0],-1])
+            encoded_seq=self.dis_units(encoded_seq)
+            encoded_seq=tf.reshape(encoded_seq,[-1,
+                                 encoded_seq.shape[1]*encoded_seq.shape[2]])
             modelPredictionLogit=self.pred_logits(encoded_seq)
             return self.pred_logits(encoded_seq), attent_weights
+            
+        else: 
+            encoded_seq=self.encoder(x,training,mask)
+            encoded_seq=self.dropout(encoded_seq,training)
+            encoded_seq=self.dis_units(encoded_seq)
+            encoded_seq=tf.reshape(encoded_seq,[-1,
+                                    encoded_seq.shape[1]*encoded_seq.shape[2]])
+            tf.print(encoded_seq.shape)
+            modelPredictionLogit=self.pred_logits(encoded_seq)
+            return modelPredictionLogit
