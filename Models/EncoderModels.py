@@ -126,7 +126,7 @@ class Annotator(tf.keras.Model):
         
         # num_dense_units: Is the number of neuron in the last layer of the 
         model, usually one for binary classification and regression problems 
-        and  equal to number of classes incase of multi-class 
+        and equals to number of classes incase of multi-class 
         classfications problems.
         
         # dense_activation: is the activation function that will be applied to 
@@ -247,7 +247,7 @@ class AnnotatorGRU(tf.keras.Model):
                              rate=rate,
                              return_attent_weights=return_attent_weights)
         
-        self.dis_units=tf.keras.layers.Dense(distilation_units,
+        self.gru=tf.keras.layers.GRU(unitsGRU,
                                              activation="relu")
         
         self.dropout=tf.keras.layers.Dropout(rate=rate)
@@ -259,18 +259,16 @@ class AnnotatorGRU(tf.keras.Model):
         mask=EncoderParts.create_padding_mask(x)
         if not training and self.return_attent_weights:
             encoded_seq, attent_weights=self.encoder(x,training,mask)
-            encoded_seq=self.dropout(encoded_seq,training)
-            encoded_seq=self.dis_units(encoded_seq)
-            encoded_seq=tf.reshape(encoded_seq,[-1,
-                                 encoded_seq.shape[1]*encoded_seq.shape[2]])
+            encoded_seq=self.dropout(encoded_seq,training=training)
+            encoded_seq=self.gru(encoded_seq)
+            encoded_seq=self.dropout(encoded_seq,training=training)
             modelPredictionLogit=self.pred_logits(encoded_seq)
             return self.pred_logits(encoded_seq), attent_weights
             
         else: 
             encoded_seq=self.encoder(x,training,mask)
-            encoded_seq=self.dropout(encoded_seq,training)
-            encoded_seq=self.dis_units(encoded_seq)
-            encoded_seq=tf.reshape(encoded_seq,[-1,
-                                    encoded_seq.shape[1]*encoded_seq.shape[2]])
+            encoded_seq=self.dropout(encoded_seq,training=training)
+            encoded_seq=self.gru(encoded_seq)
+            encoded_seq=self.dropout(encoded_seq,training=training)
             modelPredictionLogit=self.pred_logits(encoded_seq)
             return modelPredictionLogit
