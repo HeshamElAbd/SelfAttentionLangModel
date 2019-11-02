@@ -10,7 +10,7 @@ language models and the second is the annotator which is used to map an input
 sequene to a specific numerical label.
 """
 # loadthe modules
-from SelfAttentionLangModel.Parts import EncoderParts
+from Parts import EncoderParts
 import tensorflow as tf
 
 # define the models
@@ -62,18 +62,21 @@ class Modeler(tf.keras.Model):
         
         self.pred_logits =tf.keras.layers.Dense(vocabulary_size)
         
+    
+    @tf.function # construc an autograph of the function
     def call(self, x,training):
         mask=EncoderParts.create_padding_mask(x)
-        if not self.return_attent_weights:
-            encoded_seq=self.encoder(x,training,mask)
-            encoded_seq=self.dropout(encoded_seq,training)
-            modelPredictionLogit=self.pred_logits(encoded_seq)
-            return modelPredictionLogit
-        else: 
+        if not training and  self.return_attent_weights:
             encoded_seq, attent_weights=self.encoder(x,training,mask)
-            encoded_seq=self.dropout(encoded_seq,training)
+            encoded_seq=self.dropout(encoded_seq,training=training)
             modelPredictionLogit=self.pred_logits(encoded_seq)
             return self.pred_logits(encoded_seq), attent_weights
+            
+        else: 
+            encoded_seq=self.encoder(x,training,mask)
+            encoded_seq=self.dropout(encoded_seq,training=training)
+            modelPredictionLogit=self.pred_logits(encoded_seq)
+            return modelPredictionLogit
 
 class Annotator(tf.keras.Model):
     def __init__(self,embedding_dim,
