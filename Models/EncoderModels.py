@@ -234,7 +234,7 @@ class AnnotatorGRU(tf.keras.Model):
         the last dense layer, for example Relu or sigmoid, default
         is None. 
         """
-        super(Annotator,self).__init__()
+        super(AnnotatorGRU,self).__init__()
         
         self.return_attent_weights=return_attent_weights
         
