@@ -153,7 +153,7 @@ class Annotator(tf.keras.Model):
         
         self.pred_logits =tf.keras.layers.Dense(num_dense_units,
                                                 activation=dense_activation)
-        
+    @tf.function    
     def call(self, x,training):
         mask=EncoderParts.create_padding_mask(x)
         if not training and self.return_attent_weights:
