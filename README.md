@@ -5,7 +5,11 @@ google tutorial avilable at https://www.tensorflow.org/beta/tutorials/text/trans
 
 # Notes and Updates: 
 ## To DO: 
-### Check the custom Training function with the Annotator and the Modeler 
+### build a pip package for the library. 
+### more documentation and examples
+
+## Notes: 
+### because of the difference in the bifurcating condition between return self-attention weights and outputs and only the output the _fit_ method is not an applicable and a custom training loop should be used
 
 ## Current State: 
 ### The Modeler and Annotator Models are ready for deployment.
@@ -25,5 +29,5 @@ demoModel=EncoderModels.Modeler(
                                       return_attent_weights=False
                                          )
                                          
-demoModel is a keras model that can be used to be trained as usal using fit method or using a tf.GradientTape method along with custom training. 
+
 
