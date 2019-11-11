@@ -5,14 +5,14 @@ google tutorial avilable at https://www.tensorflow.org/beta/tutorials/text/trans
 
 
 ## To DO: 
-### build a pip package for the library. 
-### more documentation and examples
+1- build a pip package for the library. 
+2- more documentation and examples
 
 ## Notes: 
-### because of the difference in the bifurcating condition between return self-attention weights and outputs and only the output the _fit_ method is not an applicable and a custom training loop should be used
+##### because of the difference in the bifurcating condition between return self-attention weights and outputs and only the output the _fit_ method is not an applicable and a custom training loop should be used
 
 ## Current State: 
-### The Modeler and Annotator Models are ready for deployment.
+The Modeler and Annotator Models are ready for deployment.
 
 ## Examples: 
 from SelfAttentionLangModel.Models import EncoderModels
