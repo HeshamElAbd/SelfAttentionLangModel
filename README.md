@@ -3,7 +3,7 @@ Language model based upon the Encoder units of the transformer. For Theortical b
 paper @(https://arxiv.org/abs/1706.03762) and for detials regard the impelementation please refere to the source code here and to
 google tutorial avilable at https://www.tensorflow.org/beta/tutorials/text/transformer. 
 
-# Notes and Updates: 
+
 ## To DO: 
 ### build a pip package for the library. 
 ### more documentation and examples
